@@ -35,9 +35,10 @@ def parse_truncated_json(s, depth=0, last_error=None):
             s = s + '"}'
         elif err == OOB and s[-2:] == ',"':
             s = s[:-2]
+        else:
+            raise Exception("Don't know how to deal with this: {}".format(
+                e.args[0]))
         return parse_truncated_json(s, depth, last_error=OOB)
-
-        raise Exception("Don't know how to deal with this")
     return o
 
 
