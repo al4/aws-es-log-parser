@@ -38,8 +38,9 @@ def parse_truncated_json(s, depth=0, last_error=None):
         elif err is EXPECTING_PROPERTY and s[-1:].isalnum():
             s = s + '"}'
         elif err is EXPECTING_PROPERTY and s[-1:] == ',':
-            print('BAR')
             s = s[:-1]
+        elif err is EXPECTING_PROPERTY and (len(s) - col) > 1:
+            s = s[:col]
         elif err is OOB and s[-2:] == ',"':
             s = s[:-2]
         elif err is OOB and s[-1:] == '"':
@@ -57,6 +58,8 @@ def parse_truncated_json(s, depth=0, last_error=None):
                 s = s[:-1]
             else:
                 s = s + '}'
+        elif err is EXPECTING_COMMA and (len(s) - col) > 5:
+            s = s[:col] + ',' + s[col:]
         elif err is EXPECTING_COMMA and last_error is EXPECTING_COMMA:
             s = s + '}'
         elif err is EXPECTING_COMMA and last_error is EXPECTING_PROPERTY:
