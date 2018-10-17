@@ -167,6 +167,31 @@ def find_level(s):
     return s[x:y]
 
 
+def parse_line(line):
+    log.debug('-'*100)
+    log.debug(line)
+    out = {}
+    out['took'] = find_field(line, name='took')
+    out['level'] = find_level(line)
+
+    source = find_field(line, name='source')
+    if not all((source, out['took'])):
+        log.info("Skipping message '{}'".format(line))
+        return None
+
+    source = source.replace('\\"', '\"')
+    try:
+        o = parse_truncated_json(source)
+    except Exception as e:
+        log.warning("Failed to parse line; Error: {}; line: {}".format(
+            e.args[0], line))
+        return None
+
+    out['source'] = o
+    log.debug(out)
+    return out
+
+
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument('--log-level', default='warn')
@@ -176,37 +201,19 @@ if __name__ == "__main__":
     level = getattr(logging, _l.upper())
     log.setLevel(level)
 
-    f = open(args.out_file, 'w')
 
     failed = 0
     succeeded = 0
-    for line in sys.stdin.readlines():
-        log.debug('-'*100)
-        log.debug(line)
-        out = {}
-        out['took'] = find_field(line, name='took')
-        out['level'] = find_level(line)
-        log.debug(out)
+    with open(args.out_file, 'w') as f:
+        for line in sys.stdin.readlines():
+            out = parse_line(line)
+            if out is None:
+                failed += 1
+                continue
 
-        source = find_field(line, name='source')
-        if not all((source, out['took'])):
-            log.info("Skipping message '{}'".format(line))
-            continue
-
-        source = source.replace('\\"', '\"')
-        try:
-            o = parse_truncated_json(source)
-        except Exception as e:
-            failed += 1
-            log.warning("Failed to parse line; Error: {}; line: {}".format(
-                e.args[0], line))
-            continue
-        out['source'] = o
-        succeeded += 1
-
-        f.write(json.dumps(out) + '\n')
-        log.info(out)
-    f.close()
+            succeeded += 1
+            f.write(json.dumps(out) + '\n')
+            log.info(out)
 
     log.info("Successfully parsed: {}; Failed: {}".format(succeeded, failed))
 
