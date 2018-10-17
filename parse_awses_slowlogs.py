@@ -1,5 +1,10 @@
 import json
 import sys
+import logging
+
+logging.basicConfig(level=logging.INFO)
+log = logging
+log.level = logging.INFO
 
 UNTERMINATED = "Unterminated string"
 EXPECTING_OBJECT = "Expecting object"
@@ -11,16 +16,16 @@ NO_JSON = "No JSON object could be decoded"
 
 
 def parse_truncated_json(s, depth=0, last_error=None):
-    print(s)
+    log.debug(s)
     if depth > 10:
         raise Exception("Too deep for string {}, last error: {}".format(
             s, last_error))
     try:
         o = json.loads(s)
     except ValueError as e:
-        # print('string {} gives {}'.format(s, e.args[0]))
+        log.debug('string {} gives {}'.format(s, e.args[0]))
         err = parse_error(e.args[0])
-        print('err: {}'.format(err))
+        log.debug('err {}: {} (last: {})'.format(err, e.args[0], last_error))
 
         depth += 1
         if err == UNTERMINATED:
@@ -47,16 +52,16 @@ def parse_truncated_json(s, depth=0, last_error=None):
             s = s[:-1]
         elif err == OOB and s[-1:] == ':':
             s = s + '""'
-        elif err == EXPECTING_COMMA:
-            c = find_open_bracket(s)
-            if c:
-                s = s + c
+        elif err is EXPECTING_COMMA and last_error is EXPECTING_COMMA:
+            s = s[:-5]
+        elif err is EXPECTING_COMMA:
+            s = s + ','
         elif err == NO_JSON:
             s = s[:-1]
         else:
             raise Exception("Failed to parse string '{}': {}".format(
                 s, e.args[0]))
-        return parse_truncated_json(s, depth, last_error=OOB)
+        return parse_truncated_json(s, depth, last_error=err)
     return o
 
 
@@ -113,29 +118,32 @@ def find_field(s, name='source'):
     return line[x:y]
 
 
-failed = 0
-succeeded = 0
-for line in sys.stdin.readlines():
-    # print("---- line {}".format(1 + failed + succeeded))
-    # print(line)
-    source = find_field(line, name='source')
-    # print("Source: {}".format(source))
-    took = find_field(line, name='took')
-    # print("Took: {}".format(took))
+if __name__ == "__main__":
+    failed = 0
+    succeeded = 0
+    for line in sys.stdin.readlines():
+        out = {}
+        source = find_field(line, name='source')
+        log.debug("Source: {}".format(source))
+        took = find_field(line, name='took')
+        out['took'] = took
+        log.debug("Took: {}".format(took))
 
-    if not all((source, took)):
-        print("Skipping message '{}'".format(line))
-        continue
+        if not all((source, took)):
+            log.info("Skipping message '{}'".format(line))
+            continue
 
-    source = source.replace('\\"', '"')
-    try:
-        o = parse_truncated_json(source)
-    except Exception as e:
-        failed += 1
-        print("Failed to parse line; Error: {}; line: {}".format(
-            e.args[0], line))
-        continue
-    succeeded += 1
-    # print(o)
+        source = source.replace('\\"', '\"')
+        try:
+            o = parse_truncated_json(source)
+        except Exception as e:
+            failed += 1
+            log.warn("Failed to parse line; Error: {}; line: {}".format(
+                e.args[0], line))
+            continue
+        out['source'] = source
+        succeeded += 1
+        print(out)
 
-print("S: {}; F: {}".format(succeeded, failed))
+    log.info("S: {}; F: {}".format(succeeded, failed))
+    # {"journald_message":"23:34:12.641Z\\",\\"cardUid\\":\\"ed5e704a-eed5-406f-b307-e7782ac54951\\",\\"billingA"}
