@@ -48,6 +48,8 @@ def parse_truncated_json(s, depth=0, last_error=None):
             s = s + '""'
         elif err is EXPECTING_COLON:
             s = s + ':""'
+        elif err is EXPECTING_VALUE:
+            s = s + '""'
         elif find_open_bracket(s):
             c = find_open_bracket(s)
             if c:
@@ -67,8 +69,6 @@ def parse_truncated_json(s, depth=0, last_error=None):
             s = s + '}'
         elif err is EXPECTING_COMMA:
             s = s + ','
-        elif err is EXPECTING_VALUE:
-            s = s + ""
         elif err == NO_JSON:
             s = s[:-1]
         else:
@@ -197,5 +197,5 @@ if __name__ == "__main__":
         log.info(out)
     f.close()
 
-    log.info("S: {}; F: {}".format(succeeded, failed))
+    print("S: {}; F: {}".format(succeeded, failed))
 
