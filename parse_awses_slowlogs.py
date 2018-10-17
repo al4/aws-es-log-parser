@@ -5,8 +5,8 @@ import re
 import sys
 import logging
 
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger()
+logging.basicConfig(format='%(levelname)s %(message)s')
+log = logging.getLogger('parser')
 
 EXPECTING_COLON = "Expecting ':' delimiter"
 EXPECTING_COMMA = "Expecting ',' delimiter"
@@ -31,7 +31,6 @@ def parse_truncated_json(s, depth=0, last_error=None):
         depth += 1
 
         log.debug("len: {}, col: {}".format(len(s), col))
-        print("FOO", s[-1:], err)
 
         if err is UNTERMINATED:
             s = s + '"'
@@ -159,7 +158,7 @@ def find_level(s):
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument('--log-level')
+    p.add_argument('--log-level', default='warn')
     p.add_argument('out_file')
     args = p.parse_args()
     _l = args.log_level or 'info'
@@ -190,12 +189,11 @@ if __name__ == "__main__":
             failed += 1
             log.warning("Failed to parse line; Error: {}; line: {}".format(
                 e.args[0], line))
-            print(line)
             continue
         out['source'] = o
         succeeded += 1
 
-        f.write(json.dumps(out))
+        f.write(json.dumps(out) + '\n')
         log.info(out)
     f.close()
 
