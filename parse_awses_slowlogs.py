@@ -5,7 +5,7 @@ import re
 import sys
 import logging
 
-logging.basicConfig(format='%(levelname)s %(message)s')
+logging.basicConfig(format='[%(levelname)s] %(message)s')
 log = logging.getLogger('parser')
 
 EXPECTING_COLON = "Expecting ':' delimiter"
@@ -19,6 +19,10 @@ UNTERMINATED = "Unterminated string"
 
 
 def parse_truncated_json(s, depth=0, last_error=None):
+    """ Try to fix truncated JSON
+
+    HERE BE DRAGONS; this is basically a result of trial & error
+    """
     if depth > 10:
         raise Exception("Too deep for string {}, last error: {}".format(
             s, last_error))
@@ -79,6 +83,9 @@ def parse_truncated_json(s, depth=0, last_error=None):
 
 
 def find_open_bracket(s):
+    """ Find whether a bracket/brace is open and return the character to close
+    it
+    """
     lsb = s.rfind('[')
     rsb = s.rfind(']')
     if lsb > -1 and (rsb == -1 or lsb > rsb):
@@ -104,6 +111,8 @@ def find_open_bracket(s):
 
 
 def parse_error(msg):
+    """ Return the error constant, and the index at which it occurs
+    """
     c = int(re.findall(r'\(char (\d+)\)', str(msg))[0])
 
     if UNTERMINATED in msg:
@@ -126,6 +135,8 @@ def parse_error(msg):
 
 
 def find_field(s, name='source'):
+    """ Find a named field from the cloudwatch log
+    """
     x = line.find('{}['.format(name)) + len(name) + 1
     try:
         y = line.index(']"', x)
@@ -197,5 +208,5 @@ if __name__ == "__main__":
         log.info(out)
     f.close()
 
-    print("S: {}; F: {}".format(succeeded, failed))
+    log.info("Successfully parsed: {}; Failed: {}".format(succeeded, failed))
 
