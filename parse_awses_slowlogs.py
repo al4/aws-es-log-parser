@@ -1,10 +1,10 @@
+import argparse
 import json
 import sys
 import logging
 
 logging.basicConfig(level=logging.INFO)
-log = logging
-log.level = logging.INFO
+log = logging.getLogger()
 
 UNTERMINATED = "Unterminated string"
 EXPECTING_OBJECT = "Expecting object"
@@ -119,6 +119,13 @@ def find_field(s, name='source'):
 
 
 if __name__ == "__main__":
+    p = argparse.ArgumentParser()
+    p.add_argument('--log-level')
+    args = p.parse_args() 
+    _l = args.log_level or 'info'
+    level = getattr(logging, _l.upper())
+    log.setLevel(level)
+
     failed = 0
     succeeded = 0
     for line in sys.stdin.readlines():
@@ -141,9 +148,9 @@ if __name__ == "__main__":
             log.warn("Failed to parse line; Error: {}; line: {}".format(
                 e.args[0], line))
             continue
-        out['source'] = source
+        out['source'] = o
         succeeded += 1
-        print(out)
+        log.info(out)
 
     log.info("S: {}; F: {}".format(succeeded, failed))
     # {"journald_message":"23:34:12.641Z\\",\\"cardUid\\":\\"ed5e704a-eed5-406f-b307-e7782ac54951\\",\\"billingA"}
